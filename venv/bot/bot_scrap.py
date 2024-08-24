@@ -37,6 +37,11 @@ def start_message(message):
 
 ### Все игры из указанной категории и информация одной игры!
 
+
+
+
+
+
 db_config = {
     'host': "localhost",
     'dbname': "postgres",
@@ -52,65 +57,73 @@ urls = {'мусор': 'https://stopgame.ru/games/musor/new?p=',
 
 
 class ProvidingGames:
-    def __init__(self, urls, messege_in_user):
+    def __init__(self, bot, urls, message_in_user):
+        self.bot = bot
         self.urls = urls
-        self.messege = messege_in_user.text.lower()
+        self.message = message_in_user.text.lower()
     
-    def scrap_gamse(self):
+    def scrap_games(self, message):
         try:
             page = 0
             games = []
 
-            url = self.urls[self.messege]
+            url = self.urls[self.message]
 
             while True:
                 page += 1
                 new_page_url = url + str(page)
                 soup = BeautifulSoup(requests.get(new_page_url).text, 'html.parser')
-                data = soup.find_all('a', class_='._card_1u499_4')
+                data = soup.select('._card_1u499_4')
                 time.sleep(5)
 
                 if data[0]['title'] not in games:
                     for item in data:
-                        bot.send_message(self.message.chat.id, item['title'])
-                        bot.send_message(self.message.chat.id, f"https://stopgame.ru{item['href']}")
-                        bot.send_message(self.message.chat.id, '--------------------------------------------')
+                        self.bot.send_message(message.chat.id, item['title'])
+                        self.bot.send_message(message.chat.id, f"https://stopgame.ru{item['href']}")
+                        self.bot.send_message(message.chat.id, '--------------------------------------------')
                         games.append(item['title'])
+                        
                 break
+
         except:
-            game_info = OneGame(db_config)
-            game_info.game_in_db()
+           game_info = OneGame(db_config, bot, message)
+           game_info.game_in_db(message)
             
 
 
 @bot.message_handler()
-def start(message):
-    providing_games = ProvidingGames(urls, message)
-    providing_games.scrap_gamse(message)
+def games(message):
+    providing_games = ProvidingGames(bot, urls, message)
+    providing_games.scrap_games(message)
 
 
 class OneGame:
-    def __init__(self, db_config, message):
+    def __init__(self, db_config, bot, message):
         self.conn = psycopg2.connect(**db_config)
         self.cur = self.conn.cursor()
+        self.bot = bot
         self.message = message
 
     
-    def game_in_db(self):
+    def game_in_db(self, message):
         with self.conn.cursor() as self.cur:
-            self.cur.execute("SELECT * FORM person WHERE game_name = %s", (self.message))
+            self.cur.execute("SELECT * FROM person WHERE game_name = %s", (message.text,))
             game = self.cur.fetchall()
 
         if game:
-            soup = BeautifulSoup(requests.get(game[0][2]).text, 'html.parser')            
-            release_data = soup.find('div', class_='info-grid_value_1hh2w_220').text.strip()
-            bot.send_message(self.message.chat.id, game[0][1])
-            bot.send_message(self.message.chat.id, game[0][2])
-            bot.send_message(self.message.chat.id, f"Дата выхода: {release_data}")
-            bot.send_message(self.message.chat.id, '--------------------------------------------')
+            
+            soup = BeautifulSoup(requests.get(game[0][1]).text, 'html.parser')            
+            release_data = soup.find('dd').text
+
+            self.bot.send_message(message.chat.id, game[0][0])
+            self.bot.send_message(message.chat.id, game[0][1])
+            self.bot.send_message(message.chat.id, f"Дата выхода: {release_data}")
+            self.bot.send_message(message.chat.id, '--------------------------------------------')
             self.conn.close()
+
         else:
-            bot.send_message(self.message.chat.id, "Либо такой игры нет на сайте, либо вы допустили ошибку.")
+            self.bot.send_message(message.chat.id, "Либо такой игры нет на сайте, либо вы допустили ошибку.")
+            self.conn.close()
 
 
 bot.polling(none_stop=True)
