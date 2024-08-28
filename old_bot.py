@@ -39,7 +39,7 @@ def info(message):
             page += 1
             new_page_url = url + str(page)
             soup = BeautifulSoup(requests.get(new_page_url).text, 'html.parser')
-            data = soup.find_all('a', class_='_card_1ovwy_1')
+            data = soup.select('._card_1u499_4')
             time.sleep(10)
             
             if data[0]['title'] not in games:
@@ -60,10 +60,10 @@ def info(message):
 
         if game:
             soup = BeautifulSoup(requests.get(game[0][2]).text, 'html.parser')
-            release_date = soup.find('div', class_='info-grid_value_1hh2w_220').text.strip()
+            release_data = soup.find('dd').text
             bot.send_message(message.chat.id, game[0][1])
             bot.send_message(message.chat.id, game[0][2])
-            bot.send_message(message.chat.id, f"Дата выхода: {release_date}")
+            bot.send_message(message.chat.id, f"Дата выхода: {release_data}")
             bot.send_message(message.chat.id, '--------------------------------------------')
             conn.close()
 

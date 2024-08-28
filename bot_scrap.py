@@ -2,7 +2,7 @@ from bs4 import BeautifulSoup
 import requests
 import time
 import psycopg2
-from new_bot.import_data import messages, db_config, urls, bot
+from import_data import messages, db_config, urls, bot
 
 
 ### Обработка команды /start
